@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>成绩追踪</title>
+<style>
+:root {
+  --primary: #1F4E79;
+  --primary-light: #D6E4F0;
+  --green: #008000;
+  --green-bg: #E2EFDA;
+  --red: #CC0000;
+  --red-bg: #FCE4EC;
+  --yellow: #FFF2CC;
+  --orange: #ED7D31;
+  --bg: #f5f7fa;
+  --card: #fff;
+  --text: #333;
+  --text-light: #888;
+  --radius: 12px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  -webkit-tap-highlight-color: transparent;
+}
+.header {
+  background: linear-gradient(135deg, var(--primary) 0%, #2d6da3 100%);
+  color: #fff;
+  padding: 16px 20px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header h1 { font-size: 18px; font-weight: 600; }
+.header p { font-size: 12px; opacity: 0.8; margin-top: 2px; }
+.tabs {
+  display: flex;
+  background: #fff;
+  border-bottom: 1px solid #e0e0e0;
+  position: sticky;
+  top: 58px;
+  z-index: 99;
+  overflow-x: auto;
+}
+.tab {
+  flex: 1;
+  min-width: 60px;
+  text-align: center;
+  padding: 12px 6px;
+  font-size: 12px;
+  color: var(--text-light);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .2s;
+}
+.tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+.page { display: none; padding: 16px; }
+.page.active { display: block; }
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.card-title .badge {
+  font-size: 11px;
+  background: var(--primary-light);
+  color: var(--primary);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+/* Summary cards */
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.summary-item {
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+}
+.summary-item .label { font-size: 12px; color: var(--text-light); }
+.summary-item .value { font-size: 22px; font-weight: 700; margin: 4px 0; }
+.summary-item .value.green { color: var(--green); }
+.summary-item .value.red { color: var(--red); }
+.summary-item .value.blue { color: var(--primary); }
+.summary-item .sub { font-size: 11px; color: var(--text-light); }
+/* Exam list */
+.exam-item {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.exam-item .exam-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.exam-item .exam-name { font-weight: 600; font-size: 15px; }
+.exam-item .exam-date { font-size: 12px; color: var(--text-light); }
+.exam-item .rank-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.exam-item .rank-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.exam-item .rank-badge.green { background: var(--green-bg); color: var(--green); }
+.exam-item .rank-badge.red { background: var(--red-bg); color: var(--red); }
+.exam-item .rank-badge.normal { background: var(--bg); color: var(--text); }
+.exam-item .total-rank {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 8px;
+  border-top: 1px solid #eee;
+  font-size: 13px;
+}
+.exam-item .total-rank span { font-weight: 600; }
+/* Form styles */
+.form-group { margin-bottom: 16px; }
+.form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.form-group input, .form-group select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid #ddd;
+  border-radius: 8px;
+  font-size: 15px;
+  transition: border-color .2s;
+  -webkit-appearance: none;
+}
+.form-group input:focus, .form-group select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+.subject-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.subject-input {
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 10px;
+}
+.subject-input .subj-name {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+}
+.subject-input .subj-name .max-score { color: var(--text-light); font-weight: 400; }
+.subject-input input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1.5px solid #ddd;
+  border-radius: 6px;
+  font-size: 15px;
+  text-align: center;
+}
+.subject-input input:focus { outline:none; border-color: var(--primary); }
+.subject-input input.score-input { margin-bottom: 4px; }
+.subject-input input.rank-input { font-size: 14px; }
+.btn {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .2s;
+}
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+}
+.btn-primary:active { opacity: 0.8; }
+.btn-danger {
+  background: var(--red);
+  color: #fff;
+  margin-top: 8px;
+}
+.btn-outline {
+  background: transparent;
+  color: var(--primary);
+  border: 1.5px solid var(--primary);
+  margin-top: 8px;
+}
+.btn-sm {
+  display: inline-block;
+  width: auto;
+  padding: 6px 14px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+/* Trend chart area */
+.trend-chart {
+  width: 100%;
+  height: 220px;
+  position: relative;
+}
+.trend-chart canvas { width: 100% !important; height: 100% !important; }
+/* Stability */
+.stability-row {
+  display: flex;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+.stability-row:last-child { border-bottom: none; }
+.stability-row .subj { width: 50px; font-weight: 600; font-size: 13px; }
+.stability-row .stats {
+  flex: 1;
+  display: flex;
+  justify-content: space-around;
+  text-align: center;
+  font-size: 12px;
+}
+.stability-row .stats .stat-val { font-weight: 600; }
+.stability-row .stats .stat-val.best { color: var(--green); }
+.stability-row .stats .stat-val.worst { color: var(--red); }
+.stability-row .eval-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+.eval-tag.stable { background: var(--green-bg); color: var(--green); }
+.eval-tag.unstable { background: var(--red-bg); color: var(--red); }
+.eval-tag.warning { background: var(--yellow); color: #CC8800; }
+.eval-tag.ok { background: var(--bg); color: var(--text); }
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-light);
+}
+.empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+.empty-state p { font-size: 14px; margin-bottom: 16px; }
+/* Settings */
+.settings-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+.settings-item label { font-size: 14px; }
+.settings-item input {
+  width: 60px;
+  padding: 6px 10px;
+  border: 1.5px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  text-align: center;
+}
+/* Animations */
+@keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+.page.active { animation: fadeIn .25s ease; }
+/* Edit overlay */
+.overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 200;
+  justify-content: center;
+  align-items: flex-end;
+}
+.overlay.active { display: flex; }
+.overlay-content {
+  background: #fff;
+  width: 100%;
+  max-height: 90vh;
+  border-radius: 16px 16px 0 0;
+  padding: 20px;
+  overflow-y: auto;
+  animation: slideUp .3s ease;
+}
+@keyframes slideUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
+.overlay-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.overlay-header h3 { font-size: 16px; }
+.overlay-close {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: var(--bg);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Subject tabs for 平时 */
+.subj-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 0 0 12px;
+  -webkit-overflow-scrolling: touch;
+}
+.subj-tab {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--bg);
+  color: var(--text);
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  transition: all .2s;
+}
+.subj-tab.active {
+  background: var(--primary-light);
+  color: var(--primary);
+  border-color: var(--primary);
+  font-weight: 600;
+}
+/* Quiz list item */
+.quiz-item {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  background: var(--bg);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  gap: 12px;
+}
+.quiz-item .quiz-info { flex: 1; }
+.quiz-item .quiz-name { font-weight: 600; font-size: 14px; }
+.quiz-item .quiz-meta { font-size: 12px; color: var(--text-light); margin-top: 2px; }
+.quiz-item .quiz-score {
+  text-align: center;
+  min-width: 50px;
+}
+.quiz-item .quiz-score .score-val { font-size: 20px; font-weight: 700; }
+.quiz-item .quiz-score .score-rate { font-size: 11px; color: var(--text-light); }
+.quiz-item .quiz-rank {
+  text-align: center;
+  min-width: 40px;
+}
+.quiz-item .quiz-rank .rank-val { font-size: 14px; font-weight: 600; }
+.quiz-item .quiz-rank .rank-label { font-size: 10px; color: var(--text-light); }
+.quiz-item .quiz-del {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: var(--red-bg);
+  color: var(--red);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+/* Quiz form */
+.quiz-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.quiz-form-row .form-group { margin-bottom: 12px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>成绩追踪分析</h1>
+  <p id="subtitle">初一 · 手机录入版</p>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="overview">总览</div>
+  <div class="tab" data-tab="exams">大考记录</div>
+  <div class="tab" data-tab="quizzes">平时成绩</div>
+  <div class="tab" data-tab="trend">排名趋势</div>
+  <div class="tab" data-tab="stability">稳定性</div>
+  <div class="tab" data-tab="settings">设置</div>
+</div>
+
+<!-- Page: Overview -->
+<div class="page active" id="page-overview">
+  <div class="card" id="summary-card">
+    <div class="card-title">最近一次大考 <span class="badge" id="summary-exam-name">暂无</span></div>
+    <div class="summary-grid" id="summary-grid"></div>
+  </div>
+  <div class="card" id="trend-mini-card">
+    <div class="card-title">大考排名走势</div>
+    <div class="trend-chart"><canvas id="mini-chart"></canvas></div>
+  </div>
+  <div class="card" id="change-card">
+    <div class="card-title">较上次变动</div>
+    <div id="change-content"></div>
+  </div>
+  <div class="card" id="quiz-summary-card">
+    <div class="card-title">平时成绩概览</div>
+    <div id="quiz-summary-content"></div>
+  </div>
+</div>
+
+<!-- Page: Exam List -->
+<div class="page" id="page-exams">
+  <div id="exam-list"></div>
+  <div style="text-align:center; padding:10px;">
+    <button class="btn btn-primary" onclick="openAddExamForm()" style="max-width:300px;">+ 录入大考成绩</button>
+  </div>
+</div>
+
+<!-- Page: Quizzes (平时成绩) -->
+<div class="page" id="page-quizzes">
+  <div class="card">
+    <div class="subj-tabs" id="subj-tabs"></div>
+  </div>
+  <!-- 得分率趋势图 -->
+  <div class="card" id="quiz-trend-card" style="display:none">
+    <div class="card-title">📈 得分率趋势 <span class="badge" id="quiz-trend-badge"></span></div>
+    <div style="font-size:12px;color:var(--text-light);margin-bottom:8px;">折线为实际得分率，虚线为趋势线</div>
+    <div style="position:relative;height:200px;">
+      <canvas id="quiz-trend-chart"></canvas>
+    </div>
+  </div>
+  <!-- 平时成绩稳定性分析 -->
+  <div class="card" id="quiz-stability-card" style="display:none">
+    <div class="card-title">📊 稳定性分析 <span class="badge" id="quiz-stability-badge"></span></div>
+    <div id="quiz-stability-content"></div>
+  </div>
+  <div id="quiz-list"></div>
+  <div style="text-align:center; padding:10px;">
+    <button class="btn btn-primary" onclick="openAddQuizForm()" style="max-width:300px;">+ 录入测验成绩</button>
+  </div>
+</div>
+
+<!-- Page: Trend -->
+<div class="page" id="page-trend">
+  <div class="card">
+    <div class="card-title">各科年级排名趋势</div>
+    <div style="font-size:12px;color:var(--text-light);margin-bottom:10px;">排名越低（数字越小）越好</div>
+    <div class="trend-chart" style="height:280px;"><canvas id="trend-chart"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">总分排名趋势</div>
+    <div class="trend-chart" style="height:240px;"><canvas id="total-chart"></canvas></div>
+  </div>
+</div>
+
+<!-- Page: Stability -->
+<div class="page" id="page-stability">
+  <div class="card">
+    <div class="card-title">大考科目稳定性分析</div>
+    <div style="font-size:12px;color:var(--text-light);margin-bottom:10px;">标准差越小=排名越稳定</div>
+    <div id="stability-content"></div>
+  </div>
+</div>
+
+<!-- Page: Settings -->
+<div class="page" id="page-settings">
+  <div class="card">
+    <div class="card-title">科目满分设置</div>
+    <div id="settings-content"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">数据管理</div>
+    <button class="btn btn-outline" onclick="exportJSON()">备份数据（JSON）</button>
+    <button class="btn btn-outline" onclick="document.getElementById('import-file').click()">恢复数据（JSON）</button>
+    <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(event)">
+    <button class="btn btn-outline" style="margin-top:8px" onclick="exportCSV()">导出大考为 Excel CSV</button>
+    <button class="btn btn-outline" style="margin-top:8px" onclick="exportQuizCSV()">导出平时成绩 CSV</button>
+  </div>
+  <div class="card">
+    <div class="card-title">关于</div>
+    <p style="font-size:13px;color:var(--text-light);line-height:1.6;">
+      数据保存在手机浏览器本地，清除浏览器数据会丢失。建议定期备份。<br>
+      导出的 CSV 文件可用 Excel 或 WPS 打开。
+    </p>
+  </div>
+</div>
+
+<!-- Add/Edit Exam Overlay -->
+<div class="overlay" id="exam-overlay">
+  <div class="overlay-content">
+    <div class="overlay-header">
+      <h3 id="exam-form-title">录入大考</h3>
+      <button class="overlay-close" onclick="closeExamForm()">&times;</button>
+    </div>
+    <div class="form-group">
+      <label>考试名称</label>
+      <input type="text" id="ef-name" placeholder="如：初一上学期期中考试">
+    </div>
+    <div class="form-group">
+      <label>考试日期</label>
+      <input type="date" id="ef-date">
+    </div>
+    <div id="exam-subject-forms"></div>
+    <button class="btn btn-primary" onclick="saveExam()" id="btn-save-exam">保存</button>
+    <button class="btn btn-danger" id="btn-delete-exam" style="display:none" onclick="deleteExam()">删除此考试</button>
+  </div>
+</div>
+
+<!-- Add/Edit Quiz Overlay -->
+<div class="overlay" id="quiz-overlay">
+  <div class="overlay-content">
+    <div class="overlay-header">
+      <h3 id="quiz-form-title">录入测验</h3>
+      <button class="overlay-close" onclick="closeQuizForm()">&times;</button>
+    </div>
+    <div style="font-size:13px;color:var(--text-light);margin-bottom:12px;" id="quiz-form-subj"></div>
+    <div class="form-group">
+      <label>测验名称</label>
+      <input type="text" id="qf-name" placeholder="如：第三单元测验">
+    </div>
+    <div class="form-group">
+      <label>测验日期</label>
+      <input type="date" id="qf-date">
+    </div>
+    <div class="quiz-form-row">
+      <div class="form-group">
+        <label>分数</label>
+        <input type="number" id="qf-score" placeholder="分数" step="0.5" inputmode="decimal">
+      </div>
+      <div class="form-group">
+        <label>满分</label>
+        <input type="number" id="qf-max" placeholder="满分" step="1" inputmode="numeric">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>班级排名（选填）</label>
+      <input type="number" id="qf-rank" placeholder="班级排名" inputmode="numeric">
+    </div>
+    <button class="btn btn-primary" onclick="saveQuiz()">保存</button>
+    <button class="btn btn-danger" id="btn-delete-quiz" style="display:none" onclick="deleteQuiz()">删除此测验</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+// ==================== DATA ====================
+const SUBJECTS = [
+  {name:'语文', max:120}, {name:'数学', max:100}, {name:'英语', max:100},
+  {name:'道法', max:50}, {name:'历史', max:70}, {name:'地理', max:50},
+  {name:'生物', max:50}, {name:'体育', max:50}
+];
+
+// Pre-filled exam data from Excel
+const PRE_FILLED_EXAMS = [
+  {
+    name:'初一上学期期中考试',
+    date:'2025-11-05',
+    scores:[92.5, 90, 93.25, 42, 84, 46, 45, 48.75],
+    ranks:[141, 158, 27, 61, 52, 62, 90, 155],
+    classRanks:[null, null, null, null, null, null, null, null],
+    cultureRank:72,
+    totalRank:60,
+    cultureClassRank:4,
+    totalClassRank:4
+  },
+  {
+    name:'初一上学期期末考试',
+    date:'2026-01-13',
+    scores:[105.5, 97, 99.75, 45, 51, 44, 43, 48.5],
+    ranks:[44, 18, 2, 71, 480, 149, 130, 328],
+    classRanks:[null, null, null, null, null, null, null, null],
+    cultureRank:51,
+    totalRank:40,
+    cultureClassRank:4,
+    totalClassRank:3
+  }
+];
+
+// Pre-filled quiz data from Excel 平时成绩表
+const PRE_FILLED_QUIZZES = {
+  '数学': [
+    {name:'周测1', date:'2026-03-01', score:62, max:100, rank:10},
+    {name:'周测2', date:'2026-03-15', score:77, max:100, rank:9},
+    {name:'周测3', date:'2026-04-01', score:94, max:100, rank:8},
+    {name:'周测4', date:'2026-04-08', score:86, max:100, rank:14}
+  ],
+  '英语': [
+    {name:'1单元测试', date:'2026-03-01', score:100.25, max:105, rank:2},
+    {name:'2单元测试', date:'2026-03-15', score:96.85, max:100, rank:3},
+    {name:'3单元测试', date:'2026-04-01', score:96.43, max:100, rank:6}
+  ]
+};
+
+function loadData() {
+  const raw = localStorage.getItem('grades_tracker_v2');
+  if (raw) {
+    try { return JSON.parse(raw); } catch(e) {}
+  }
+  // Check v1 data
+  const v1 = localStorage.getItem('grades_tracker');
+  const init = {
+    subjects: JSON.parse(JSON.stringify(SUBJECTS)),
+    exams: v1 ? JSON.parse(v1).exams : JSON.parse(JSON.stringify(PRE_FILLED_EXAMS)),
+    quizzes: JSON.parse(JSON.stringify(PRE_FILLED_QUIZZES))
+  };
+  saveData(init);
+  return init;
+}
+function saveData(data) { localStorage.setItem('grades_tracker_v2', JSON.stringify(data)); }
+let DATA = loadData();
+let currentSubjIdx = 0; // Current subject tab for 平时
+let editingExamIdx = -1;
+let editingQuizIdx = -1;
+
+// ==================== TABS ====================
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('page-' + t.dataset.tab).classList.add('active');
+    refreshTab(t.dataset.tab);
+  });
+});
+
+function refreshTab(tab) {
+  if (tab === 'overview') drawOverview();
+  if (tab === 'exams') drawExamList();
+  if (tab === 'quizzes') drawQuizPage();
+  if (tab === 'trend') drawTrendCharts();
+  if (tab === 'stability') drawStability();
+  if (tab === 'settings') drawSettings();
+}
+
+// ==================== OVERVIEW ====================
+function drawOverview() {
+  const exams = DATA.exams;
+  if (!exams.length) {
+    document.getElementById('summary-card').innerHTML = '<div class="empty-state"><div class="icon">📋</div><p>暂无大考记录</p><p style="font-size:12px">点击"大考记录"→"录入大考成绩"开始</p></div>';
+    document.getElementById('trend-mini-card').style.display = 'none';
+    document.getElementById('change-card').style.display = 'none';
+  } else {
+    document.getElementById('trend-mini-card').style.display = '';
+    document.getElementById('change-card').style.display = '';
+
+    const last = exams[exams.length - 1];
+    document.getElementById('summary-exam-name').textContent = last.name;
+
+    let best = null, worst = null;
+    DATA.subjects.forEach((s, i) => {
+      const rk = last.ranks[i];
+      if (rk == null || rk === '') return;
+      if (!best || rk < best.rank) best = {name: s.name, rank: rk};
+      if (!worst || rk > worst.rank) worst = {name: s.name, rank: rk};
+    });
+
+    const cultureRank = last.cultureRank || '-';
+    const totalRank = last.totalRank || '-';
+    const cultureClassRank = last.cultureClassRank || '-';
+    const totalClassRank = last.totalClassRank || '-';
+
+    document.getElementById('summary-grid').innerHTML = `
+      <div class="summary-item"><div class="label">排名最靠前</div><div class="value green">${best ? best.rank : '-'}</div><div class="sub">${best ? best.name : ''}</div></div>
+      <div class="summary-item"><div class="label">排名最靠后</div><div class="value red">${worst ? worst.rank : '-'}</div><div class="sub">${worst ? worst.name : ''}</div></div>
+      <div class="summary-item"><div class="label">文化课年级排名</div><div class="value blue">${cultureRank}</div><div class="sub">班级第${cultureClassRank}名</div></div>
+      <div class="summary-item"><div class="label">含体育年级排名</div><div class="value blue">${totalRank}</div><div class="sub">班级第${totalClassRank}名</div></div>
+    `;
+    drawMiniChart();
+    drawExamChange();
+  }
+
+  // Quiz summary
+  drawQuizSummary();
+}
+
+function drawExamChange() {
+  const exams = DATA.exams;
+  if (exams.length >= 2) {
+    const last = exams[exams.length - 1];
+    const prev = exams[exams.length - 2];
+    let changes = [];
+    DATA.subjects.forEach((s, i) => {
+      const cr = last.ranks[i], pr = prev.ranks[i];
+      if (cr && pr && cr !== pr) {
+        const diff = pr - cr;
+        changes.push({name: s.name, diff, improved: diff > 0});
+      }
+    });
+    if (changes.length) {
+      let ch = '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+      changes.sort((a, b) => b.diff - a.diff);
+      changes.forEach(c => {
+        const cls = c.improved ? 'green' : 'red';
+        const arrow = c.improved ? '↑' : '↓';
+        ch += `<span class="rank-badge ${cls}">${c.name} ${arrow}${Math.abs(c.diff)}</span>`;
+      });
+      ch += '</div>';
+      if (last.cultureRank && prev.cultureRank) {
+        const cd = prev.cultureRank - last.cultureRank;
+        ch += `<div style="margin-top:10px;font-size:13px;">文化课：第${prev.cultureRank}名 → 第${last.cultureRank}名 <span style="color:${cd>0?'var(--green)':'var(--red)'};font-weight:600;">${cd>0?'↑':'↓'}${Math.abs(cd)}</span></div>`;
+      }
+      if (last.totalRank && prev.totalRank) {
+        const td = prev.totalRank - last.totalRank;
+        ch += `<div style="margin-top:4px;font-size:13px;">含体育：第${prev.totalRank}名 → 第${last.totalRank}名 <span style="color:${td>0?'var(--green)':'var(--red)'};font-weight:600;">${td>0?'↑':'↓'}${Math.abs(td)}</span></div>`;
+      }
+      document.getElementById('change-content').innerHTML = ch;
+    } else {
+      document.getElementById('change-content').innerHTML = '<div style="color:var(--text-light);font-size:13px;">排名无变动</div>';
+    }
+  } else {
+    document.getElementById('change-content').innerHTML = '<div style="color:var(--text-light);font-size:13px;">需要至少2次大考才能对比</div>';
+  }
+}
+
+function drawMiniChart() {
+  const canvas = document.getElementById('mini-chart');
+  if (!canvas) return;
+  if (canvas._chart) canvas._chart.destroy();
+  const exams = DATA.exams;
+  const labels = exams.map(e => e.name.replace(/初一[上下]学期/, ''));
+  const cultureData = exams.map(e => e.cultureRank || null);
+  const totalData = exams.map(e => e.totalRank || null);
+  canvas._chart = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: '文化课排名', data: cultureData, backgroundColor: 'rgba(31,78,121,0.7)', borderRadius: 4 },
+        { label: '含体育排名', data: totalData, backgroundColor: 'rgba(237,125,49,0.7)', borderRadius: 4 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } } },
+      scales: {
+        y: { reverse: true, beginAtZero: true, ticks: { font: { size: 11 } }, title: { display: true, text: '排名(↓更好)', font: { size: 10 } } },
+        x: { ticks: { font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+// ==================== QUIZ SUMMARY (on overview) ====================
+function drawQuizSummary() {
+  const quizzes = DATA.quizzes || {};
+  let html = '';
+  let hasAny = false;
+  DATA.subjects.forEach(s => {
+    const list = quizzes[s.name] || [];
+    if (list.length === 0) return;
+    hasAny = true;
+    const rates = list.map(q => q.max ? (q.score / q.max * 100) : 0);
+    const avgRate = (rates.reduce((a,b)=>a+b,0) / rates.length).toFixed(1);
+    const bestRate = Math.max(...rates).toFixed(1);
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0;">
+      <span style="font-weight:600;font-size:13px;">${s.name}</span>
+      <div style="text-align:right;font-size:12px;">
+        <span style="color:var(--primary);font-weight:600;">${avgRate}%</span>
+        <span style="color:var(--text-light);margin-left:4px;">均分 | 最高${bestRate}% | ${list.length}次</span>
+      </div>
+    </div>`;
+  });
+  if (!hasAny) {
+    html = '<div style="color:var(--text-light);font-size:13px;text-align:center;padding:12px;">暂无平时成绩记录<br>点击"平时成绩"页签录入</div>';
+  }
+  document.getElementById('quiz-summary-content').innerHTML = html;
+}
+
+// ==================== EXAM LIST ====================
+function drawExamList() {
+  const exams = DATA.exams;
+  if (!exams.length) {
+    document.getElementById('exam-list').innerHTML = '<div class="empty-state"><div class="icon">📝</div><p>暂无大考记录</p></div>';
+    return;
+  }
+  let html = '';
+  for (let i = exams.length - 1; i >= 0; i--) {
+    const e = exams[i];
+    html += `<div class="exam-item" onclick="openEditExamForm(${i})">`;
+    html += `<div class="exam-header"><span class="exam-name">${e.name}</span><span class="exam-date">${e.date || ''}</span></div>`;
+    html += '<div class="rank-row">';
+    DATA.subjects.forEach((s, j) => {
+      const rk = e.ranks[j];
+      if (rk) {
+        let cls = 'normal';
+        if (rk <= 30) cls = 'green';
+        if (rk >= 100) cls = 'red';
+        html += `<span class="rank-badge ${cls}">${s.name} ${rk}</span>`;
+      }
+    });
+    html += '</div>';
+    html += `<div class="total-rank">
+      <span>文化课 第${e.cultureRank || '-'}名</span>
+      <span>含体育 第${e.totalRank || '-'}名</span>
+    </div>`;
+    html += '</div>';
+  }
+  document.getElementById('exam-list').innerHTML = html;
+}
+
+// ==================== EXAM FORM ====================
+function buildExamSubjectForms() {
+  let html = '<div style="font-size:14px;font-weight:600;margin:12px 0 8px;">各科成绩</div><div class="subject-inputs">';
+  DATA.subjects.forEach((s, i) => {
+    html += `<div class="subject-input">
+      <div class="subj-name"><span>${s.name}</span><span class="max-score">满分${s.max}</span></div>
+      <input type="number" class="score-input" id="ef-score-${i}" placeholder="分数" step="0.5" inputmode="decimal">
+      <input type="number" class="rank-input" id="ef-rank-${i}" placeholder="年级排名" inputmode="numeric">
+    </div>`;
+  });
+  html += '</div>';
+  html += '<div style="font-size:14px;font-weight:600;margin:16px 0 8px;">总分排名</div>';
+  html += '<div class="subject-inputs">';
+  html += `<div class="subject-input"><div class="subj-name"><span>文化课年级排名</span></div><input type="number" id="ef-culture-rank" placeholder="排名" inputmode="numeric"></div>`;
+  html += `<div class="subject-input"><div class="subj-name"><span>含体育年级排名</span></div><input type="number" id="ef-total-rank" placeholder="排名" inputmode="numeric"></div>`;
+  html += `<div class="subject-input"><div class="subj-name"><span>文化课班级排名</span></div><input type="number" id="ef-culture-class" placeholder="排名" inputmode="numeric"></div>`;
+  html += `<div class="subject-input"><div class="subj-name"><span>含体育班级排名</span></div><input type="number" id="ef-total-class" placeholder="排名" inputmode="numeric"></div>`;
+  html += '</div>';
+  document.getElementById('exam-subject-forms').innerHTML = html;
+}
+
+function openAddExamForm() {
+  editingExamIdx = -1;
+  document.getElementById('exam-form-title').textContent = '录入新大考';
+  document.getElementById('btn-delete-exam').style.display = 'none';
+  document.getElementById('ef-name').value = '';
+  document.getElementById('ef-date').value = new Date().toISOString().slice(0, 10);
+  buildExamSubjectForms();
+  clearExamFormValues();
+  document.getElementById('exam-overlay').classList.add('active');
+}
+
+function openEditExamForm(idx) {
+  editingExamIdx = idx;
+  const e = DATA.exams[idx];
+  document.getElementById('exam-form-title').textContent = '编辑 · ' + e.name;
+  document.getElementById('btn-delete-exam').style.display = '';
+  document.getElementById('ef-name').value = e.name;
+  document.getElementById('ef-date').value = e.date || '';
+  buildExamSubjectForms();
+  DATA.subjects.forEach((s, i) => {
+    document.getElementById('ef-score-' + i).value = (e.scores && e.scores[i]) || '';
+    document.getElementById('ef-rank-' + i).value = (e.ranks && e.ranks[i]) || '';
+  });
+  document.getElementById('ef-culture-rank').value = e.cultureRank || '';
+  document.getElementById('ef-total-rank').value = e.totalRank || '';
+  document.getElementById('ef-culture-class').value = e.cultureClassRank || '';
+  document.getElementById('ef-total-class').value = e.totalClassRank || '';
+  document.getElementById('exam-overlay').classList.add('active');
+}
+
+function clearExamFormValues() {
+  DATA.subjects.forEach((s, i) => {
+    document.getElementById('ef-score-' + i).value = '';
+    document.getElementById('ef-rank-' + i).value = '';
+  });
+  document.getElementById('ef-culture-rank').value = '';
+  document.getElementById('ef-total-rank').value = '';
+  document.getElementById('ef-culture-class').value = '';
+  document.getElementById('ef-total-class').value = '';
+}
+
+function saveExam() {
+  const name = document.getElementById('ef-name').value.trim();
+  if (!name) { alert('请输入考试名称'); return; }
+  const date = document.getElementById('ef-date').value;
+  const scores = [], ranks = [];
+  DATA.subjects.forEach((s, i) => {
+    scores.push(parseFloat(document.getElementById('ef-score-' + i).value) || null);
+    ranks.push(parseInt(document.getElementById('ef-rank-' + i).value) || null);
+  });
+  const cultureRank = parseInt(document.getElementById('ef-culture-rank').value) || null;
+  const totalRank = parseInt(document.getElementById('ef-total-rank').value) || null;
+  const cultureClassRank = parseInt(document.getElementById('ef-culture-class').value) || null;
+  const totalClassRank = parseInt(document.getElementById('ef-total-class').value) || null;
+
+  const exam = { name, date, scores, ranks, cultureRank, totalRank, cultureClassRank, totalClassRank };
+
+  if (editingExamIdx >= 0) {
+    DATA.exams[editingExamIdx] = exam;
+  } else {
+    DATA.exams.push(exam);
+  }
+  saveData(DATA);
+  closeExamForm();
+  drawOverview();
+  drawExamList();
+}
+
+function deleteExam() {
+  if (!confirm('确定删除这次考试记录？')) return;
+  DATA.exams.splice(editingExamIdx, 1);
+  saveData(DATA);
+  closeExamForm();
+  drawOverview();
+  drawExamList();
+}
+
+function closeExamForm() {
+  document.getElementById('exam-overlay').classList.remove('active');
+}
+
+// ==================== QUIZ PAGE (平时成绩) ====================
+function drawQuizPage() {
+  // Build subject tabs
+  let tabsHtml = '';
+  DATA.subjects.forEach((s, i) => {
+    const active = i === currentSubjIdx ? ' active' : '';
+    const count = (DATA.quizzes[s.name] || []).length;
+    tabsHtml += `<div class="subj-tab${active}" onclick="switchSubj(${i})">${s.name}${count ? ' ('+count+')' : ''}</div>`;
+  });
+  document.getElementById('subj-tabs').innerHTML = tabsHtml;
+
+  const sName = DATA.subjects[currentSubjIdx].name;
+  const list = DATA.quizzes[sName] || [];
+  // 按日期排序（正序，用于图表；倒序展示列表）
+  const sorted = [...list].sort((a,b) => (a.date||'') < (b.date||'') ? -1 : 1);
+
+  if (!list.length) {
+    document.getElementById('quiz-trend-card').style.display = 'none';
+    document.getElementById('quiz-stability-card').style.display = 'none';
+    document.getElementById('quiz-list').innerHTML = `<div class="empty-state"><div class="icon">📓</div><p>${sName}暂无平时成绩</p><p style="font-size:12px">点击下方"录入测验成绩"开始</p></div>`;
+    return;
+  }
+
+  // 趋势图（≥2条数据才显示）
+  if (sorted.length >= 2) {
+    document.getElementById('quiz-trend-card').style.display = '';
+    document.getElementById('quiz-trend-badge').textContent = sName;
+    drawQuizTrendChart(sorted);
+  } else {
+    document.getElementById('quiz-trend-card').style.display = 'none';
+  }
+
+  // 稳定性分析（≥2条数据）
+  if (sorted.length >= 2) {
+    document.getElementById('quiz-stability-card').style.display = '';
+    document.getElementById('quiz-stability-badge').textContent = sName;
+    drawQuizStability(sorted, DATA.subjects[currentSubjIdx]);
+  } else {
+    document.getElementById('quiz-stability-card').style.display = 'none';
+  }
+
+  // 列表（倒序）
+  let html = '';
+  for (let i = list.length - 1; i >= 0; i--) {
+    const q = list[i];
+    const rate = q.max ? (q.score / q.max * 100).toFixed(1) : '-';
+    let rateColor = 'var(--text)';
+    if (rate !== '-' && parseFloat(rate) >= 90) rateColor = 'var(--green)';
+    else if (rate !== '-' && parseFloat(rate) < 70) rateColor = 'var(--red)';
+    html += `<div class="quiz-item">
+      <div class="quiz-info">
+        <div class="quiz-name">${q.name || '未命名'}</div>
+        <div class="quiz-meta">${q.date || ''} | 满分${q.max || '-'}</div>
+      </div>
+      <div class="quiz-score">
+        <div class="score-val" style="color:${rateColor}">${q.score}</div>
+        <div class="score-rate">${rate}%</div>
+      </div>
+      ${q.rank ? `<div class="quiz-rank"><div class="rank-val">第${q.rank}名</div><div class="rank-label">班级</div></div>` : ''}
+      <button class="quiz-del" onclick="openEditQuiz(${i})">✏️</button>
+    </div>`;
+  }
+  document.getElementById('quiz-list').innerHTML = html;
+}
+
+// 计算线性回归趋势线
+function linearRegression(vals) {
+  const n = vals.length;
+  const xs = vals.map((_, i) => i);
+  const sumX = xs.reduce((a,b)=>a+b, 0);
+  const sumY = vals.reduce((a,b)=>a+b, 0);
+  const sumXY = xs.reduce((a,x,i)=>a+x*vals[i], 0);
+  const sumXX = xs.reduce((a,x)=>a+x*x, 0);
+  const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+  const intercept = (sumY - slope * sumX) / n;
+  return xs.map(x => parseFloat((slope * x + intercept).toFixed(2)));
+}
+
+function drawQuizTrendChart(sorted) {
+  // 优先使用排名数据（排名数字越小越好），否则使用得分率
+  const hasRanks = sorted.some(q => q.rank !== null && q.rank !== undefined);
+  let dataValues, yLabel, yMin, yMax, yCallback, tooltipCallback, pointColors;
+
+  if (hasRanks) {
+    // 使用排名，Y轴倒置（排名1在最上面更直观）
+    const ranks = sorted.map(q => q.rank || null);
+    const validRanks = ranks.filter(v => v !== null);
+    const maxRank = Math.max(...validRanks);
+    dataValues = ranks;
+    yLabel = '班级排名';
+    yMin = 0;
+    yMax = maxRank + 2;
+    yCallback = v => v === 0 ? '' : `第${v}名`;
+    tooltipCallback = ctx => ctx.dataset.label === '趋势线'
+      ? `趋势: 第${ctx.parsed.y}名`
+      : `排名: 第${ctx.parsed.y}名`;
+    // 排名好（小）=绿色，差（大）=红色
+    pointColors = ranks.map(r => r === null ? 'grey' : r <= 5 ? '#008000' : r > 15 ? '#CC0000' : '#1F4E79');
+  } else {
+    // 没有排名数据，使用得分率
+    const rates = sorted.map(q => q.max ? parseFloat((q.score / q.max * 100).toFixed(1)) : null);
+    dataValues = rates;
+    yLabel = '得分率%';
+    yMin = 0;
+    yMax = 105;
+    yCallback = v => v + '%';
+    tooltipCallback = ctx => ctx.dataset.label === '趋势线'
+      ? `趋势: ${ctx.parsed.y}%`
+      : `得分率: ${ctx.parsed.y}%`;
+    pointColors = rates.map(r => r === null ? 'grey' : r >= 90 ? '#008000' : r < 70 ? '#CC0000' : '#1F4E79');
+  }
+
+  const validValues = dataValues.filter(v => v !== null);
+  const trendLine = validValues.length >= 2 ? linearRegression(validValues) : null;
+
+  // 用简短标签（测验名 or 日期后6位）
+  const labels = sorted.map(q => {
+    const n = q.name || '';
+    return n.length > 4 ? n.slice(0, 4) : (n || (q.date ? q.date.slice(5) : '?'));
+  });
+
+  const canvas = document.getElementById('quiz-trend-chart');
+  if (canvas._chart) canvas._chart.destroy();
+
+  const datasets = [
+    {
+      label: hasRanks ? '班级排名' : '得分率%',
+      data: dataValues,
+      borderColor: '#1F4E79',
+      backgroundColor: 'rgba(31,78,121,0.12)',
+      tension: 0.3,
+      pointRadius: 5,
+      pointBackgroundColor: pointColors,
+      borderWidth: 2,
+      fill: true,
+      spanGaps: true,
+      order: 1
+    }
+  ];
+
+  if (trendLine) {
+    // 重建趋势数据（含null的需补对应位置）
+    let tidx = 0;
+    const trendData = dataValues.map(r => r !== null ? trendLine[tidx++] : null);
+    datasets.push({
+      label: '趋势线',
+      data: trendData,
+      borderColor: '#ED7D31',
+      backgroundColor: 'transparent',
+      borderDash: [6, 3],
+      tension: 0,
+      pointRadius: 0,
+      borderWidth: 2,
+      fill: false,
+      spanGaps: true,
+      order: 2
+    });
+  }
+
+  canvas._chart = new Chart(canvas, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } },
+        tooltip: { callbacks: { label: tooltipCallback } }
+      },
+      scales: {
+        y: {
+          min: yMin, max: yMax,
+          ticks: { font: { size: 10 }, callback: yCallback },
+          grid: { color: 'rgba(0,0,0,0.05)' }
+        },
+        x: { ticks: { font: { size: 10 }, maxRotation: 35 } }
+      }
+    }
+  });
+}
+
+function drawQuizStability(sorted, subj) {
+  // 使用排名进行稳定性分析（分数因难度不同不可比）
+  const ranks = sorted.map(q => q.rank).filter(r => r !== null && r !== undefined);
+  if (ranks.length < 2) {
+    document.getElementById('quiz-stability-content').innerHTML = `
+      <div class="empty-state" style="padding:20px;">
+        <div class="icon">📊</div>
+        <p>需要至少2次有排名的测验数据</p>
+        <p style="font-size:12px">录入时填写班级排名即可分析</p>
+      </div>`;
+    return;
+  }
+
+  const maxRank = Math.max(...ranks);  // 最差排名（数字最大）
+  const minRank = Math.min(...ranks);  // 最好排名（数字最小）
+  const avg = (ranks.reduce((a,b)=>a+b,0)/ranks.length);
+  const std = Math.sqrt(ranks.reduce((a,b)=>a+(b-avg)**2,0)/ranks.length);
+  const avgStr = avg.toFixed(1);
+  const stdStr = std.toFixed(1);
+
+  // 趋势判断（用线性回归斜率）- 排名下降（数字变小）是好事
+  const trend = linearRegression(ranks);
+  const slope = trend[trend.length-1] - trend[0];
+  let trendText, trendColor, trendIcon;
+  // slope < 0 表示排名数字变小（进步），slope > 0 表示排名数字变大（退步）
+  if (slope < -1) { trendText = '持续进步 ↑'; trendColor = 'var(--green)'; trendIcon = '📈'; }
+  else if (slope > 1) { trendText = '有所退步 ↓'; trendColor = 'var(--red)'; trendIcon = '📉'; }
+  else { trendText = '排名稳定 →'; trendColor = 'var(--orange)'; trendIcon = '➡️'; }
+
+  // 稳定性（以排名的标准差衡量）
+  let evalText, evalCls;
+  if (std <= 2) { evalText = '非常稳定'; evalCls = 'stable'; }
+  else if (std <= 5) { evalText = '较稳定'; evalCls = 'ok'; }
+  else if (std <= 10) { evalText = '波动较大'; evalCls = 'warning'; }
+  else { evalText = '极不稳定'; evalCls = 'unstable'; }
+
+  // 最近一次 vs 均值 - 排名数字越小越好
+  const last = ranks[ranks.length-1];
+  const diff = last - avg;  // 负数表示比平均好（排名更靠前）
+  const diffStr = Math.abs(diff).toFixed(1);
+  const diffColor = last <= avg ? 'var(--green)' : 'var(--red)';
+  const diffWord = last <= avg ? '优于' : '差于';
+
+  const html = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div style="background:var(--bg);border-radius:8px;padding:12px;text-align:center;">
+        <div style="font-size:11px;color:var(--text-light);margin-bottom:4px;">最好排名</div>
+        <div style="font-size:22px;font-weight:700;color:var(--green)">第${minRank}名</div>
+      </div>
+      <div style="background:var(--bg);border-radius:8px;padding:12px;text-align:center;">
+        <div style="font-size:11px;color:var(--text-light);margin-bottom:4px;">最差排名</div>
+        <div style="font-size:22px;font-weight:700;color:var(--red)">第${maxRank}名</div>
+      </div>
+      <div style="background:var(--bg);border-radius:8px;padding:12px;text-align:center;">
+        <div style="font-size:11px;color:var(--text-light);margin-bottom:4px;">平均排名</div>
+        <div style="font-size:22px;font-weight:700;color:var(--primary)">第${avgStr}名</div>
+      </div>
+      <div style="background:var(--bg);border-radius:8px;padding:12px;text-align:center;">
+        <div style="font-size:11px;color:var(--text-light);margin-bottom:4px;">排名波动</div>
+        <div style="font-size:22px;font-weight:700;color:var(--text)">±${stdStr}名</div>
+        <div style="margin-top:4px;"><span class="eval-tag ${evalCls}">${evalText}</span></div>
+      </div>
+    </div>
+    <div style="background:var(--bg);border-radius:8px;padding:12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <div>
+        <div style="font-size:12px;color:var(--text-light)">整体趋势</div>
+        <div style="font-size:15px;font-weight:700;color:${trendColor};margin-top:2px;">${trendIcon} ${trendText}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:12px;color:var(--text-light)">最近一次 vs 平均</div>
+        <div style="font-size:15px;font-weight:700;color:${diffColor};margin-top:2px;">${diffWord}平均 ${diffStr}名</div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--text-light);margin-top:4px;">共 ${ranks.length} 次有排名数据 · 波动越小代表发挥越稳定</div>
+  `;
+  document.getElementById('quiz-stability-content').innerHTML = html;
+}
+
+function switchSubj(idx) {
+  currentSubjIdx = idx;
+  drawQuizPage();
+}
+
+function openAddQuizForm() {
+  editingQuizIdx = -1;
+  const s = DATA.subjects[currentSubjIdx];
+  document.getElementById('quiz-form-title').textContent = '录入测验 · ' + s.name;
+  document.getElementById('quiz-form-subj').textContent = '满分默认：' + s.max + '分（可修改）';
+  document.getElementById('btn-delete-quiz').style.display = 'none';
+  document.getElementById('qf-name').value = '';
+  document.getElementById('qf-date').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('qf-score').value = '';
+  document.getElementById('qf-max').value = s.max;
+  document.getElementById('qf-rank').value = '';
+  document.getElementById('quiz-overlay').classList.add('active');
+}
+
+function openEditQuiz(idx) {
+  editingQuizIdx = idx;
+  const s = DATA.subjects[currentSubjIdx];
+  const list = DATA.quizzes[s.name] || [];
+  const q = list[idx];
+  document.getElementById('quiz-form-title').textContent = '编辑 · ' + s.name;
+  document.getElementById('quiz-form-subj').textContent = '';
+  document.getElementById('btn-delete-quiz').style.display = '';
+  document.getElementById('qf-name').value = q.name || '';
+  document.getElementById('qf-date').value = q.date || '';
+  document.getElementById('qf-score').value = q.score || '';
+  document.getElementById('qf-max').value = q.max || s.max;
+  document.getElementById('qf-rank').value = q.rank || '';
+  document.getElementById('quiz-overlay').classList.add('active');
+}
+
+function saveQuiz() {
+  const sName = DATA.subjects[currentSubjIdx].name;
+  const name = document.getElementById('qf-name').value.trim();
+  if (!name) { alert('请输入测验名称'); return; }
+  const score = parseFloat(document.getElementById('qf-score').value);
+  if (isNaN(score)) { alert('请输入分数'); return; }
+  const max = parseFloat(document.getElementById('qf-max').value) || DATA.subjects[currentSubjIdx].max;
+  const date = document.getElementById('qf-date').value;
+  const rank = parseInt(document.getElementById('qf-rank').value) || null;
+
+  if (!DATA.quizzes[sName]) DATA.quizzes[sName] = [];
+  const quiz = { name, date, score, max, rank };
+
+  if (editingQuizIdx >= 0) {
+    DATA.quizzes[sName][editingQuizIdx] = quiz;
+  } else {
+    DATA.quizzes[sName].push(quiz);
+    if (DATA.quizzes[sName].length > 20) DATA.quizzes[sName].shift(); // Keep max 20
+  }
+  saveData(DATA);
+  closeQuizForm();
+  drawQuizPage();
+  drawQuizSummary();
+}
+
+function deleteQuiz() {
+  if (!confirm('确定删除这条测验记录？')) return;
+  const sName = DATA.subjects[currentSubjIdx].name;
+  DATA.quizzes[sName].splice(editingQuizIdx, 1);
+  saveData(DATA);
+  closeQuizForm();
+  drawQuizPage();
+  drawQuizSummary();
+}
+
+function closeQuizForm() {
+  document.getElementById('quiz-overlay').classList.remove('active');
+}
+
+// ==================== TREND CHARTS ====================
+function drawTrendCharts() {
+  const exams = DATA.exams;
+  if (!exams.length) return;
+  const labels = exams.map(e => e.name.replace(/初一[上下]学期/, ''));
+  const colors = ['#1F77B4','#FF7F0E','#2CA02C','#D62728','#9467BD','#8C564B','#E377C2','#7F7F7F'];
+  const datasets = DATA.subjects.map((s, i) => ({
+    label: s.name,
+    data: exams.map(e => e.ranks[i] || null),
+    borderColor: colors[i],
+    backgroundColor: colors[i] + '33',
+    tension: 0.3,
+    pointRadius: 4,
+    borderWidth: 2,
+    spanGaps: true
+  }));
+
+  const canvas1 = document.getElementById('trend-chart');
+  if (canvas1._chart) canvas1._chart.destroy();
+  canvas1._chart = new Chart(canvas1, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } } },
+      scales: {
+        y: { reverse: true, beginAtZero: true, ticks: { font: { size: 11 } }, title: { display: true, text: '排名(↓更好)', font: { size: 10 } } },
+        x: { ticks: { font: { size: 10 }, maxRotation: 45 } }
+      }
+    }
+  });
+
+  const canvas2 = document.getElementById('total-chart');
+  if (canvas2._chart) canvas2._chart.destroy();
+  canvas2._chart = new Chart(canvas2, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: '文化课年级排名', data: exams.map(e => e.cultureRank || null), backgroundColor: 'rgba(31,78,121,0.7)', borderRadius: 4 },
+        { label: '含体育年级排名', data: exams.map(e => e.totalRank || null), backgroundColor: 'rgba(237,125,49,0.7)', borderRadius: 4 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } } },
+      scales: {
+        y: { reverse: true, beginAtZero: true, ticks: { font: { size: 11 } }, title: { display: true, text: '排名(↓更好)', font: { size: 10 } } },
+        x: { ticks: { font: { size: 10 }, maxRotation: 45 } }
+      }
+    }
+  });
+}
+
+// ==================== STABILITY ====================
+function drawStability() {
+  const exams = DATA.exams;
+  if (exams.length < 2) {
+    document.getElementById('stability-content').innerHTML = '<div style="color:var(--text-light);font-size:13px;text-align:center;padding:20px;">需要至少2次大考数据</div>';
+    return;
+  }
+  let html = '<div class="stability-row" style="font-size:12px;font-weight:600;color:var(--text-light);border-bottom:2px solid #e0e0e0;"><div class="subj">科目</div><div class="stats"><span>最好</span><span>最差</span><span>平均</span><span>标准差</span><span>评价</span></div></div>';
+
+  DATA.subjects.forEach((s, i) => {
+    const vals = exams.map(e => e.ranks[i]).filter(v => v && v > 0);
+    if (!vals.length) return;
+    const min = Math.min(...vals);
+    const max = Math.max(...vals);
+    const avg = (vals.reduce((a,b) => a+b, 0) / vals.length).toFixed(1);
+    const std = vals.length > 1 ? Math.sqrt(vals.reduce((a,b) => a + (b-avg)**2, 0) / vals.length).toFixed(1) : 0;
+
+    let evalText, evalCls;
+    if (std <= 5) { evalText = '非常稳定'; evalCls = 'stable'; }
+    else if (std <= 15) { evalText = '较稳定'; evalCls = 'ok'; }
+    else if (std <= 30) { evalText = '波动较大'; evalCls = 'warning'; }
+    else { evalText = '极不稳定'; evalCls = 'unstable'; }
+
+    html += `<div class="stability-row">
+      <div class="subj">${s.name}</div>
+      <div class="stats">
+        <span class="stat-val best">${min}</span>
+        <span class="stat-val worst">${max}</span>
+        <span class="stat-val">${avg}</span>
+        <span class="stat-val">${std}</span>
+        <span class="eval-tag ${evalCls}">${evalText}</span>
+      </div>
+    </div>`;
+  });
+  document.getElementById('stability-content').innerHTML = html;
+}
+
+// ==================== SETTINGS ====================
+function drawSettings() {
+  let html = '';
+  DATA.subjects.forEach((s, i) => {
+    html += `<div class="settings-item">
+      <label>${s.name}</label>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:12px;color:var(--text-light)">满分</span>
+        <input type="number" value="${s.max}" onchange="updateMaxScore(${i}, this.value)" inputmode="numeric">
+      </div>
+    </div>`;
+  });
+  document.getElementById('settings-content').innerHTML = html;
+}
+
+function updateMaxScore(idx, val) {
+  DATA.subjects[idx].max = parseInt(val) || 100;
+  saveData(DATA);
+}
+
+// ==================== IMPORT/EXPORT ====================
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(DATA, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '成绩数据备份_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+}
+
+function importJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      DATA = JSON.parse(e.target.result);
+      saveData(DATA);
+      alert('数据恢复成功！');
+      drawOverview();
+      drawExamList();
+    } catch(err) {
+      alert('文件格式错误');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function exportCSV() {
+  const exams = DATA.exams;
+  if (!exams.length) { alert('暂无大考数据可导出'); return; }
+  let csv = '\uFEFF';
+  csv += '序号,考试名称,日期';
+  DATA.subjects.forEach(s => { csv += `,${s.name}分数,${s.name}年级排名`; });
+  csv += ',文化课年级排名,文化课班级排名,含体育年级排名,含体育班级排名\n';
+  exams.forEach((e, i) => {
+    csv += `${i+1},${e.name},${e.date || ''}`;
+    DATA.subjects.forEach((s, j) => {
+      csv += `,${e.scores ? (e.scores[j]||'') : ''},${e.ranks ? (e.ranks[j]||'') : ''}`;
+    });
+    csv += `,${e.cultureRank || ''},${e.cultureClassRank || ''},${e.totalRank || ''},${e.totalClassRank || ''}\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '大考成绩_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+
+function exportQuizCSV() {
+  const quizzes = DATA.quizzes || {};
+  let hasData = false;
+  DATA.subjects.forEach(s => { if ((quizzes[s.name]||[]).length) hasData = true; });
+  if (!hasData) { alert('暂无平时成绩数据可导出'); return; }
+
+  let csv = '\uFEFF科目,测验名称,日期,分数,满分,得分率,班级排名\n';
+  DATA.subjects.forEach(s => {
+    (quizzes[s.name] || []).forEach(q => {
+      const rate = q.max ? (q.score / q.max * 100).toFixed(1) + '%' : '';
+      csv += `${s.name},${q.name},${q.date || ''},${q.score},${q.max || ''},${rate},${q.rank || ''}\n`;
+    });
+  });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '平时成绩_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+
+// ==================== INIT ====================
+drawOverview();
+drawExamList();
+</script>
+</body>
+</html>
