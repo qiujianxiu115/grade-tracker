@@ -576,6 +576,7 @@ body {
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://res.wx.qq.com/open/js/cloudbase/1.1.0/cloud.js"></script>
 <script>
 // ==================== DATA ====================
 const SUBJECTS = [
@@ -625,23 +626,97 @@ const PRE_FILLED_QUIZZES = {
   ]
 };
 
-function loadData() {
+// ==================== CLOUD DATABASE (腾讯云开发) ====================
+const CLOUD_ENV = 'trial.qiujianxiu115-d4g1hmav57150eddb';
+let cloudApp = null;
+let DATA = null;
+let isCloudReady = false;
+
+// 初始化云开发
+async function initCloud() {
+  try {
+    cloudApp = cloud.init({ env: CLOUD_ENV });
+    const db = cloudApp.database();
+    // 测试连接
+    await db.collection('grades').limit(1).get();
+    isCloudReady = true;
+    console.log('云开发连接成功');
+  } catch (e) {
+    console.log('云开发连接失败，使用本地存储:', e);
+    isCloudReady = false;
+  }
+}
+
+// 从云端加载数据
+async function loadDataFromCloud() {
+  if (!isCloudReady) return loadDataLocal();
+  try {
+    const db = cloudApp.database();
+    const { data } = await db.collection('grades').doc('main').get();
+    if (data && data.data) {
+      console.log('从云端加载数据成功');
+      return data.data;
+    }
+  } catch (e) {
+    console.log('云端无数据或加载失败:', e);
+  }
+  // 云端没有数据，尝试从本地迁移
+  const localData = loadDataLocal();
+  if (localData.exams.length > 0 || Object.keys(localData.quizzes).some(k => localData.quizzes[k].length > 0)) {
+    console.log('本地有数据，迁移到云端');
+    await saveDataToCloud(localData);
+  }
+  return localData;
+}
+
+// 保存数据到云端
+async function saveDataToCloud(data) {
+  if (!isCloudReady) {
+    saveDataLocal(data);
+    return;
+  }
+  try {
+    const db = cloudApp.database();
+    await db.collection('grades').doc('main').set({ data });
+    console.log('保存到云端成功');
+  } catch (e) {
+    console.log('保存到云端失败，回退到本地:', e);
+    saveDataLocal(data);
+  }
+}
+
+// 本地存储（备用）
+function loadDataLocal() {
   const raw = localStorage.getItem('grades_tracker_v2');
   if (raw) {
     try { return JSON.parse(raw); } catch(e) {}
   }
-  // Check v1 data
   const v1 = localStorage.getItem('grades_tracker');
   const init = {
     subjects: JSON.parse(JSON.stringify(SUBJECTS)),
     exams: v1 ? JSON.parse(v1).exams : JSON.parse(JSON.stringify(PRE_FILLED_EXAMS)),
     quizzes: JSON.parse(JSON.stringify(PRE_FILLED_QUIZZES))
   };
-  saveData(init);
+  saveDataLocal(init);
   return init;
 }
-function saveData(data) { localStorage.setItem('grades_tracker_v2', JSON.stringify(data)); }
-let DATA = loadData();
+function saveDataLocal(data) { localStorage.setItem('grades_tracker_v2', JSON.stringify(data)); }
+
+// 兼容旧代码的同步接口
+function saveData(data) {
+  DATA = data;
+  saveDataToCloud(data);
+}
+
+// 初始化
+async function initApp() {
+  await initCloud();
+  DATA = await loadDataFromCloud();
+  drawOverview();
+  drawExamList();
+  drawQuizPage();
+  drawQuizSummary();
+}
 let currentSubjIdx = 0; // Current subject tab for 平时
 let editingExamIdx = -1;
 let editingQuizIdx = -1;
@@ -1447,8 +1522,7 @@ function exportQuizCSV() {
 }
 
 // ==================== INIT ====================
-drawOverview();
-drawExamList();
+initApp();
 </script>
 </body>
 </html>
